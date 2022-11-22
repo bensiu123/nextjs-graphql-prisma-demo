@@ -1,7 +1,52 @@
-import Head from 'next/head';
-import { links } from '../data/links';
+import Head from "next/head";
+import { gql, useQuery } from "@apollo/client";
+import type { Link } from "@prisma/client";
+
+const AllLinksQuery = gql`
+  query allLinksQuery($first: Int, $after: String) {
+    links(first: $first, after: $after) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      edges {
+        cursor
+        node {
+          imageUrl
+          url
+          title
+          category
+          description
+          id
+        }
+      }
+    }
+  }
+`;
+
+type Data = {
+  links: {
+    pageInfo: {
+      endCursor: string;
+      hasNextPage: boolean;
+    };
+    edges: {
+      cursor: string;
+      node: Link;
+    }[];
+  };
+};
 
 export default function Home() {
+  const { data, loading, error, fetchMore } = useQuery<Data>(AllLinksQuery, {
+    variables: { first: 2 },
+  });
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  const { endCursor, hasNextPage } = data.links.pageInfo;
+
   return (
     <div>
       <Head>
@@ -11,7 +56,7 @@ export default function Home() {
 
       <div className="container mx-auto max-w-5xl my-20">
         <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {links.map((link) => (
+          {data.links.edges.map(({ node: link }) => (
             <li key={link.id} className="shadow  max-w-md  rounded">
               <img className="shadow-sm" src={link.imageUrl} />
               <div className="p-5 flex flex-col space-y-2">
@@ -19,7 +64,7 @@ export default function Home() {
                 <p className="text-lg font-medium">{link.title}</p>
                 <p className="text-gray-600">{link.description}</p>
                 <a href={link.url} className="flex hover:text-blue-500">
-                  {link.url.replace(/(^\w+:|^)\/\//, '')}
+                  {link.url.replace(/(^\w+:|^)\/\//, "")}
                   <svg
                     className="w-4 h-4 my-1"
                     fill="currentColor"
@@ -34,6 +79,30 @@ export default function Home() {
             </li>
           ))}
         </ul>
+
+        {hasNextPage ? (
+          <button
+            className="px-4 py-2 bg-blue-500 text-white rounded my-10"
+            onClick={() => {
+              fetchMore({
+                variables: { after: endCursor },
+                updateQuery: (prevResult, { fetchMoreResult }) => {
+                  fetchMoreResult.links.edges = [
+                    ...prevResult.links.edges,
+                    ...fetchMoreResult.links.edges,
+                  ];
+                  return fetchMoreResult;
+                },
+              });
+            }}
+          >
+            more
+          </button>
+        ) : (
+          <p className="my-10 text-center font-medium">
+            You've reached the end!{" "}
+          </p>
+        )}
       </div>
     </div>
   );
