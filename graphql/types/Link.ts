@@ -1,4 +1,4 @@
-import { objectType, extendType, intArg, stringArg } from "nexus";
+import { objectType, extendType, intArg, stringArg, nonNull } from "nexus";
 import { User } from "./User";
 export const Link = objectType({
   name: "Link",
@@ -99,5 +99,42 @@ export const Response = objectType({
   definition(t) {
     t.field("pageInfo", { type: PageInfo });
     t.list.field("edges", { type: Edge });
+  },
+});
+
+export const CreateLinkMutation = extendType({
+  type: "Mutation",
+  definition(t) {
+    t.nonNull.field("createLink", {
+      type: Link,
+      args: {
+        title: nonNull(stringArg()),
+        url: nonNull(stringArg()),
+        imageUrl: nonNull(stringArg()),
+        category: nonNull(stringArg()),
+        description: nonNull(stringArg()),
+      },
+      async resolve(_parent, args, ctx) {
+        if (!ctx.user)
+          throw new Error(`You need to be logged in to perform this action`);
+
+        const user = await ctx.prisma.user.findUnique({
+          where: { email: ctx.user.email },
+        });
+
+        if (user.role !== "ADMIN") throw new Error("Unauthorized access");
+
+        const { title, url, imageUrl, category, description } = args;
+        const newLink = {
+          title,
+          url,
+          imageUrl,
+          category,
+          description,
+        };
+
+        return await ctx.prisma.link.create({ data: newLink });
+      },
+    });
   },
 });

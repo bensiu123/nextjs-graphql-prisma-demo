@@ -1,6 +1,7 @@
 import Head from "next/head";
 import { gql, useQuery } from "@apollo/client";
 import type { Link } from "@prisma/client";
+import { NextPage } from "next";
 
 const AllLinksQuery = gql`
   query allLinksQuery($first: Int, $after: String) {
@@ -37,7 +38,7 @@ type Data = {
   };
 };
 
-export default function Home() {
+const Home: NextPage = () => {
   const { data, loading, error, fetchMore } = useQuery<Data>(AllLinksQuery, {
     variables: { first: 2 },
   });
@@ -106,4 +107,6 @@ export default function Home() {
       </div>
     </div>
   );
-}
+};
+
+export default Home;
