@@ -138,3 +138,116 @@ export const CreateLinkMutation = extendType({
     });
   },
 });
+
+export const UpdateLinkMutation = extendType({
+  type: "Mutation",
+  definition(t) {
+    t.nonNull.field("updateLink", {
+      type: Link,
+      args: {
+        id: nonNull(stringArg()),
+        title: stringArg(),
+        url: stringArg(),
+        imageUrl: stringArg(),
+        category: stringArg(),
+        description: stringArg(),
+      },
+      async resolve(_parent, args, ctx) {
+        if (!ctx.user)
+          throw new Error(`You need to be logged in to perform this action`);
+
+        const user = await ctx.prisma.user.findUnique({
+          where: { email: ctx.user.email },
+        });
+
+        if (user.role !== "ADMIN") throw new Error("Unauthorized access");
+
+        const { id, title, url, imageUrl, category, description } = args;
+        const newLink = {
+          title,
+          url,
+          imageUrl,
+          category,
+          description,
+        };
+
+        return await ctx.prisma.link.update({ where: { id }, data: newLink });
+      },
+    });
+  },
+});
+
+export const DeleteLinkMutation = extendType({
+  type: "Mutation",
+  definition(t) {
+    t.nonNull.field("deleteLink", {
+      type: Link,
+      args: {
+        id: nonNull(stringArg()),
+      },
+      async resolve(_parent, args, ctx) {
+        if (!ctx.user)
+          throw new Error(`You need to be logged in to perform this action`);
+
+        const user = await ctx.prisma.user.findUnique({
+          where: { email: ctx.user.email },
+        });
+
+        if (user.role !== "ADMIN") throw new Error("Unauthorized access");
+
+        const { id } = args;
+
+        return await ctx.prisma.link.delete({ where: { id } });
+      },
+    });
+  },
+});
+
+export const AddLinkToBookmarkMutation = extendType({
+  type: "Mutation",
+  definition(t) {
+    t.nonNull.field("addLinkToBookmark", {
+      type: Link,
+      args: {
+        id: nonNull(stringArg()),
+      },
+      async resolve(_parent, args, ctx) {
+        if (!ctx.user)
+          throw new Error(`You need to be logged in to perform this action`);
+
+        const user = await ctx.prisma.user.findUnique({
+          where: { email: ctx.user.email },
+        });
+
+        /** @todo */
+        // ctx.prisma.user.findUnique({
+        //   where: { email: ctx.user.email },
+        // }).bookmarks()
+        return {};
+      },
+    });
+  },
+});
+
+export const RemoveLinkFromBookmarkMutation = extendType({
+  type: "Mutation",
+  definition(t) {
+    t.nonNull.field("removeLinkFromBookmark", {
+      type: Link,
+      args: {
+        id: nonNull(stringArg()),
+      },
+      async resolve(_parent, args, ctx) {
+        if (!ctx.user)
+          throw new Error(`You need to be logged in to perform this action`);
+
+        const user = await ctx.prisma.user.findUnique({
+          where: { email: ctx.user.email },
+        });
+
+        /** @todo */
+        return {};
+      },
+    });
+  },
+});
