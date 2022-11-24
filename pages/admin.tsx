@@ -4,6 +4,7 @@ import prisma from "../lib/prisma";
 import { GetServerSideProps, NextPage } from "next";
 import { useForm } from "react-hook-form";
 import toast, { Toaster } from "react-hot-toast";
+import type S3 from "aws-sdk/clients/s3";
 
 const CreateLinkMutation = gql`
   mutation Mutation(
@@ -35,6 +36,7 @@ type FieldValues = {
   imageUrl?: string;
   category: string;
   description: string;
+  image: unknown;
 };
 
 const Admin: NextPage = () => {
@@ -43,21 +45,53 @@ const Admin: NextPage = () => {
     handleSubmit,
     formState: { errors },
     reset,
+    getValues,
+    setValue,
   } = useForm<FieldValues>();
 
   const [createLink, { loading, error }] = useMutation(CreateLinkMutation, {
     onCompleted: () => reset(),
   });
 
+  const uploadPhoto: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    console.log(getValues("image"));
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const res = await fetch(
+      `/api/upload-image?file=${encodeURIComponent(file.name)}`
+    );
+    const data: S3.PresignedPost = await res.json();
+
+    const formData = new FormData();
+
+    Object.entries({ ...data.fields, file }).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+
+    toast
+      .promise(fetch(data.url, { method: "POST", body: formData }), {
+        loading: "Uploading...",
+        success: "Image successfully uploaded!🎉",
+        error: (err) => `Upload failed 😥 Please try again. ${err.message}`,
+      })
+      .then(() => {
+        setValue(
+          "imageUrl",
+          `https://${process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${file.name}`
+        );
+      });
+  };
+
   const onSubmit = async (data: FieldValues) => {
-    const { title, url, category, description } = data;
-    const imageUrl = `https://via.placeholder.com/300`;
+    const { title, url, category, description, imageUrl } = data;
     const variables = { title, url, category, description, imageUrl };
     try {
       toast.promise(createLink({ variables }), {
         loading: "Creating new link...",
         success: "Link successfully created!",
-        error: `Something went wrong. Please try again - ${error.message}`,
+        error: (err) => `Upload failed 😥 Please try again. ${err.message}`,
       });
     } catch (error) {
       console.error(error);
@@ -110,6 +144,18 @@ const Admin: NextPage = () => {
             name="category"
             type="text"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+          />
+        </label>
+        <label className="block">
+          <span className="text-gray-700">
+            Upload a .png or .jpg image (max 1MB).
+          </span>
+          <input
+            {...register("image", { required: true })}
+            onChange={uploadPhoto}
+            type="file"
+            accept="image/png, image/jpeg"
+            name="image"
           />
         </label>
 

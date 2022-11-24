@@ -1,4 +1,3 @@
-import Head from "next/head";
 import { gql, useQuery } from "@apollo/client";
 import type { Link } from "@prisma/client";
 import { NextPage } from "next";
@@ -50,11 +49,6 @@ const Home: NextPage = () => {
 
   return (
     <div>
-      <Head>
-        <title>Awesome Links</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
       <div className="container mx-auto max-w-5xl my-20">
         <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {data.links.edges.map(({ node: link }) => (
